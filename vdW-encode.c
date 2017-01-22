@@ -9,7 +9,7 @@
 #define POWER		4
 //#define MULTICOLOR	2
 //#define ROTATION
-#define INV
+//#define INV
 
 #define PREPARTITION
 

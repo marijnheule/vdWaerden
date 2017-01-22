@@ -1,6 +1,6 @@
 for i in {1..1000}
 do
-  for j in {1..12}
+  for j in {2..2}
   do
     echo -n $i" "$j" "
     ./a.out $1 $2 $i $j | gtimeout 10 glucose | grep SATIS

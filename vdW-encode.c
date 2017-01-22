@@ -64,6 +64,7 @@ int main (int argc , char *argv[]) {
   int nrofsets, progression, numbers, primezip, prime, full_size, multi_color, q, qmin;
   int nrofvars, nrofclauses, root, root_start, rotation_start, inv_start, rot_fac;
   int power;
+  int *rep;
 
   if (argc <= 3) {
     printf ("c wrong input: ./internal_sat sets length prime\n");
@@ -73,6 +74,9 @@ int main (int argc , char *argv[]) {
   progression = atoi (argv[2]);
   primezip    = atoi (argv[3]);
   power       = atoi (argv[4]);
+
+  rep = (int*) malloc (sizeof(int) * primezip);
+  for (i = 0; i < primezip; i++) rep[i] = i;
 
   full_size   = primezip * (progression - 1);
   prime       = greatest_divider_rec (primezip);
@@ -127,19 +131,39 @@ int main (int argc , char *argv[]) {
   printf ("p cnf %i %i\n", nrofvars, nrofclauses);
   printf ("1 0\n"); // the 0 element is in the first set
 
-  for (i = 0; i < primezip; i++) {
-    for (j = 1; j <= nrofsets; j++)
-      printf("%i ", i * nrofsets + j);
-    printf("0\n"); }
-
 #ifdef PREPARTITION
   for (i = 0; i < primezip; i++) {
     tmp = i;
     for (j = 1; j <= power; j++)
       tmp = (((tmp+1) * root) - 1) % primezip;
+//    printf("c rep rel %i %i\n", i, tmp);
+    if      (rep[tmp] > rep[i]) rep[tmp] = rep[ i ];
+    else if (rep[tmp] < rep[i]) rep[ i ] = rep[tmp];
     for (j = 1; j <= nrofsets; j++) {
       printf("%i -%i 0\n-%i %i 0\n", i*nrofsets + j, tmp*nrofsets + j, i*nrofsets + j, tmp*nrofsets + j); } }
+
+  int flag;
+  do {
+    flag = 0;
+    for (i = 0; i < primezip; i++)
+      if (rep[rep[i]] < rep[i]) {
+//        printf ("c making %i the rep of %i\n", rep[rep[i]], i);
+        rep[i] = rep[rep[i]]; flag = 1; } }
+  while (flag);
+
+  int count = 0;
+  for (i = 0; i < primezip; i++)
+    if (rep[i] == i) count++;
+//      printf ("c rep[%i] = %i\n", i, rep[i]);
+  printf ("c %i representatives\n", count);
 #endif
+
+
+  for (i = 0; i < primezip; i++) {
+    for (j = 1; j <= nrofsets; j++)
+      printf("%i ", i * nrofsets + j);
+    printf("0\n"); }
+
 
 #ifdef SBP
   for (i = 0; i < nrofsets; i++)
@@ -228,7 +252,7 @@ int main (int argc , char *argv[]) {
       for (h = 1; h <= nrofsets; h++ ) {
 	for (k = 0; k < progression; k++) {
 	  int tmp = (i + k * j - 1) % primezip;
-	  printf ("-%i ", tmp * nrofsets + h); }
+	  printf ("-%i ", rep[tmp] * nrofsets + h); }
         printf("0\n"); } }
 
   return 1;

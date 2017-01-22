@@ -15,6 +15,7 @@ int main (int argc, char** argv) {
   int *cert = (int*) malloc (sizeof(int) * m);
   for (i = 0; i < m; i++) cert[i] = -1;
 
+  int tmp = fscanf (input, " v ");
   while (1) {
     int lit;
     int tmp = fscanf (input, " %i ", &lit);
@@ -22,7 +23,12 @@ int main (int argc, char** argv) {
     if (abs(lit) > k * m) break;
     if (lit > 0) {
       cert[ (lit-1) / k ] = (lit - 1) % k; } }
-
   fclose (input);
 
-}
+  int j;
+  for (j = 1; j < l; j++)
+    for (i = 0; i < m; i++) {
+      if (cert[i] >= 0)
+        printf ("%c", cert[i] + 'a'); }
+
+  printf("\n"); }

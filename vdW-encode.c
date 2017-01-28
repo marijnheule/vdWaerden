@@ -6,10 +6,10 @@
 //#define SBP
 //#define INTERNAL_ROOT
 #define MIN_PRIME	2
-#define POWER		4
-//#define MULTICOLOR	2
+#define POWER		2
 //#define ROTATION
 //#define INV
+//#define RELAX
 
 #define PREPARTITION
 
@@ -61,7 +61,7 @@ unsigned int rotation_factor (unsigned int prime, unsigned int primezip) {
 
 int main (int argc , char *argv[]) {
   int h, i, j, k, l, tmp;
-  int nrofsets, progression, numbers, primezip, prime, full_size, multi_color, q, qmin;
+  int nrofsets, progression, numbers, primezip, prime, full_size, q, qmin;
   int nrofvars, nrofclauses, root, root_start, rotation_start, inv_start, rot_fac;
   int power;
   int *rep;
@@ -84,8 +84,8 @@ int main (int argc , char *argv[]) {
   rot_fac     = rotation_factor (prime, primezip);
   qmin        = smallest_divider (primezip / prime);
 
-  printf ("c root = %i\n", root);
-  printf ("c qmin = %i\n", qmin);
+//  printf ("c root = %i\n", root);
+//  printf ("c qmin = %i\n", qmin);
 
   if ((prime < MIN_PRIME) || (root == 1)) {
     printf("p cnf 1 2\n1 0\n -1 0\n");
@@ -107,9 +107,6 @@ int main (int argc , char *argv[]) {
   root_start   = nrofvars;
   nrofvars    += qmin * nrofsets * nrofsets;
   nrofclauses += qmin * nrofsets * nrofsets * (nrofsets-1);
-//	nrofvars    += MULTICOLOR * nrofsets * nrofsets;
-//	nrofclauses += MULTICOLOR * nrofsets * nrofsets * (nrofsets-1);
-//	nrofclauses += nrofsets * nrofsets * (primezip-1);
   nrofclauses += nrofsets * nrofsets * (primezip - (primezip / prime));
 #endif
 #ifdef ROTATION
@@ -172,37 +169,38 @@ int main (int argc , char *argv[]) {
 #endif
 
 #ifdef INTERNAL_ROOT
-  for (q = 0; q < qmin; q++) {
-    multi_color = q * nrofsets * nrofsets;
-    for (i = 0; i < nrofsets; i++) {
-      tmp = root_start + multi_color + i * nrofsets;
-      for (j = 1; j <= nrofsets; j++)
+  for (i = 0; i < nrofsets; i++) {
+    tmp = root_start + i * nrofsets;
+    for (j = 1; j <= nrofsets; j++)
+      for (k = j + 1; k <= nrofsets; k++)
+#ifdef RELAX
+        for (l = k + 1; l <= nrofsets; l++)
+          printf ("-%i -%i -%i 0\n", tmp + j, tmp + k, tmp +l); }
+#else
+	printf ("-%i -%i 0\n", tmp + j, tmp + k); }
+#endif
+
+  for (i = 0; i < nrofsets; i++)
+    for (j = i + 1; j < nrofsets; j++)
+      for (l = 1; l <= nrofsets; l++)
+#ifdef RELAX
         for (k = j + 1; k <= nrofsets; k++)
-          printf ("-%i -%i 0\n", tmp + j, tmp + k); } }
-
-  for (q = 0; q < qmin; q++) {
-    multi_color = q * nrofsets * nrofsets;
-    for (i = 0; i < nrofsets; i++)
-      for (j = i + 1; j < nrofsets; j++)
-	for (k = 1; k <= nrofsets; k++)
-          printf ("-%i -%i 0\n", root_start + multi_color + i * nrofsets + k, root_start + multi_color + j * nrofsets + k); }
-
-  multi_color = 0;
+          printf("-%i -%i -%i 0\n", rotation_start + i*nrofsets + l, rotation_start + j*nrofsets + l, rotation_start + k*nrofsets + l);
+#else
+        printf("-%i -%i 0\n", rotation_start + i*nrofsets + l, rotation_start + j*nrofsets + l);
+#endif
 
   for (i = 0; i < primezip; i++) {
     if ((i % prime) == (prime - 1)) continue;
 //    if( (i % primezip) == (primezip - 1) ) continue;
 
-#ifdef MULTICOLOR
-    multi_color = (i % qmin) * nrofsets * nrofsets;
-#endif
     tmp = i;
     for (j = 1; j <= POWER; j++)
       tmp = (((tmp+1) * root) - 1) % primezip;
 
     for (j = 1; j <= nrofsets; j++)
       for( k = 1; k <= nrofsets; k++ )
-        printf("-%i -%i %i 0\n", i * nrofsets + j, tmp * nrofsets + k, root_start + multi_color + (j-1) * nrofsets + k); }
+        printf("-%i -%i %i 0\n", i * nrofsets + j, tmp * nrofsets + k, root_start + (j-1) * nrofsets + k); }
 #endif
 
 #ifdef INV
@@ -230,12 +228,22 @@ int main (int argc , char *argv[]) {
     tmp = rotation_start + i * nrofsets;
     for (j = 1; j <= nrofsets; j++)
       for (k = j + 1; k <= nrofsets; k++)
+#ifdef RELAX
+        for (l = k + 1; l <= nrofsets; l++)
+          printf ("-%i -%i -%i 0\n", tmp + j, tmp + k, tmp +l); }
+#else
 	printf ("-%i -%i 0\n", tmp + j, tmp + k); }
+#endif
 
   for (i = 0; i < nrofsets; i++)
     for (j = i + 1; j < nrofsets; j++)
-      for (k = 1; k <= nrofsets; k++)
-        printf("-%i -%i 0\n", rotation_start + i*nrofsets + k, rotation_start + j*nrofsets + k );
+      for (l = 1; l <= nrofsets; l++)
+#ifdef RELAX
+        for (k = j + 1; k <= nrofsets; k++)
+          printf("-%i -%i -%i 0\n", rotation_start + i*nrofsets + l, rotation_start + j*nrofsets + l, rotation_start + k*nrofsets + l);
+#else
+        printf("-%i -%i 0\n", rotation_start + i*nrofsets + l, rotation_start + j*nrofsets + l);
+#endif
 
   for (i = 0; i < primezip; i++) {
     if ((i % prime) == (prime - 1)) continue;
@@ -246,14 +254,23 @@ int main (int argc , char *argv[]) {
         printf("-%i -%i %i 0\n", i * nrofsets + j, tmp*nrofsets + k, rotation_start + (j-1) * nrofsets + k); }
 #endif
 
+  int *clause = (int*) malloc (sizeof (int) * progression);
   // print the actual constraints
   for (i = 1; i <= primezip; i++)
     for (j = 1; (j*(progression-1)) < (full_size - i + 1); j++) {
+      int size = 0;
+      for (k = 0; k < progression; k++)
+        clause[size++] = rep[(i + k * j - 1) % primezip];
       for (h = 1; h <= nrofsets; h++ ) {
-	for (k = 0; k < progression; k++) {
-	  int tmp = (i + k * j - 1) % primezip;
-	  printf ("-%i ", rep[tmp] * nrofsets + h); }
+	for (k = 0; k < size; k++) {
+          printf ("-%i ", clause[k] * nrofsets + h); }
         printf("0\n"); } }
+
+//      for (h = 1; h <= nrofsets; h++ ) {
+//	for (k = 0; k < progression; k++) {
+//	  int tmp = (i + k * j - 1) % primezip;
+//	  printf ("-%i ", rep[tmp] * nrofsets + h); }
+//        printf("0\n"); } } }
 
   return 1;
 }

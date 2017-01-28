@@ -110,7 +110,7 @@ int main (int argc , char *argv[]) {
       nrofclauses++;
 
   nrofvars    = primezip * nrofsets;
-  nrofclauses = primezip + nrofsets * nrofclauses;
+  nrofclauses = primezip;
 
   nrofclauses += 1;
 #ifdef SBP
@@ -138,20 +138,7 @@ int main (int argc , char *argv[]) {
   nrofclauses += primezip * nrofsets * 2;
 #endif
 
-  printf ("p cnf %i %i\n", nrofvars, nrofclauses);
-  printf ("1 0\n"); // the 0 element is in the first set
-
 #ifdef PREPARTITION
-  for (i = 0; i < primezip; i++) {
-    tmp = i;
-    for (j = 1; j <= power; j++)
-      tmp = (((tmp+1) * root) - 1) % primezip;
-//    printf("c rep rel %i %i\n", i, tmp);
-    if      (rep[tmp] > rep[i]) rep[tmp] = rep[ i ];
-    else if (rep[tmp] < rep[i]) rep[ i ] = rep[tmp];
-    for (j = 1; j <= nrofsets; j++) {
-      printf("%i -%i 0\n-%i %i 0\n", i*nrofsets + j, tmp*nrofsets + j, i*nrofsets + j, tmp*nrofsets + j); } }
-
   int flag;
   do {
     flag = 0;
@@ -159,18 +146,63 @@ int main (int argc , char *argv[]) {
       tmp = i;
       for (j = 1; j <= power; j++)
         tmp = (((tmp+1) * root) - 1) % primezip;
-//        printf("c rep rel %i %i\n", i, tmp);
-      if      (rep[tmp] > rep[i]) { rep[tmp] = rep[ i ]; flag = 1; printf ("c making %i the rep of %i\n", rep[i], tmp); }
-      else if (rep[tmp] < rep[i]) { rep[ i ] = rep[tmp]; flag = 1; printf ("c making %i the rep of %i\n", rep[tmp], i); } }
-   } while (flag);
+      if      (rep[tmp] > rep[i]) { rep[tmp] = rep[ i ]; flag = 1; }
+      else if (rep[tmp] < rep[i]) { rep[ i ] = rep[tmp]; flag = 1; } } }
+  while (flag);
 
-  int count = 0;
-  for (i = 0; i < primezip; i++)
-    if (rep[i] == i) {
-//      printf ("c rep[%i] = %i\n", i, rep[i]);
-      count++; }
-  printf ("c %i representatives\n", count);
+//  int count = 0;
+//  for (i = 0; i < primezip; i++)
+//    if (rep[i] == i) {
+//      count++; }
+//  printf ("c %i representatives\n", count);
 #endif
+
+  int table_size = (1 << 20);
+  int *table = (int*) malloc (sizeof(int) * table_size);
+  for (i = 0; i < table_size; i++) table[i] = -1;
+
+  int *clause = (int*) malloc (sizeof (int) * progression);
+  // print the actual constraints
+  for (i = 1; i <= primezip; i++)
+    for (j = 1; (j*(progression-1)) < (full_size - i + 1); j++) {
+      int size = 0;
+      for (k = 0; k < progression; k++) {
+        int next = rep[(i + k * j - 1) % primezip] + 1;
+        int flag = 1;
+        for (h = 0; h < size; h++) {
+          if (clause[h] == next) flag = 0;
+          if (clause[h] >  next) h = size; }
+        if (flag) {
+          for (h = size; h > 0; h--) {
+            if (clause[h-1] > next)  clause[h  ] = clause[h-1];
+            else                     break; }
+          clause[h] = next; size++; } }
+      clause[size++] = 0;
+      unsigned int h = hash (clause, size) % table_size;
+      while (1) {
+        if (table[h] == -1) {
+          table[h] = stored;
+          goto add_clause; }
+        for (k = 0; k < size; k++)
+          if (clauses[table[h]+k] != clause[k])
+            goto next_hash;
+        goto next_clause;
+        next_hash:;
+        h = (h + 1) % table_size; }
+      add_clause:;
+      if (stored + size >= alloc) {
+        alloc *= 2;
+//        printf("c realloc %i\n", alloc);
+        clauses = realloc (clauses, sizeof(int) * alloc); }
+      for (k = 0; k < size; k++) clauses[stored++] = clause[k];
+      num++;
+      next_clause:; }
+
+  nrofclauses += num * nrofsets;
+
+  printf ("p cnf %i %i\n", nrofvars, nrofclauses);
+  printf ("1 0\n"); // the 0 element is in the first set
+
   for (i = 0; i < primezip; i++) {
     for (j = 1; j <= nrofsets; j++)
       printf("%i ", i * nrofsets + j);
@@ -268,46 +300,14 @@ int main (int argc , char *argv[]) {
         printf("-%i -%i %i 0\n", i * nrofsets + j, tmp*nrofsets + k, rotation_start + (j-1) * nrofsets + k); }
 #endif
 
-  int table_size = (1 << 20);
-  int *table = (int*) malloc (sizeof(int) * table_size);
-  for (i = 0; i < table_size; i++) table[i] = -1;
-
-  int *clause = (int*) malloc (sizeof (int) * progression);
-  // print the actual constraints
-  for (i = 1; i <= primezip; i++)
-    for (j = 1; (j*(progression-1)) < (full_size - i + 1); j++) {
-      int size = 0;
-      for (k = 0; k < progression; k++) {
-        int next = rep[(i + k * j - 1) % primezip] + 1;
-        int flag = 1;
-        for (h = 0; h < size; h++) {
-          if (clause[h] == next) flag = 0;
-          if (clause[h] >  next) h = size; }
-        if (flag) {
-          for (h = size; h > 0; h--) {
-            if (clause[h-1] > next)  clause[h  ] = clause[h-1];
-            else                     break; }
-          clause[h] = next; size++; } }
-      clause[size++] = 0;
-      unsigned int h = hash (clause, size) % table_size;
-      while (1) {
-        if (table[h] == -1) {
-          table[h] = stored;
-          goto add_clause; }
-        for (k = 0; k < size; k++)
-          if (clauses[table[h]+k] != clause[k])
-            goto next_hash;
-        goto next_clause;
-        next_hash:;
-        h = (h + 1) % table_size; }
-      add_clause:;
-      if (stored + size >= alloc) {
-        alloc *= 2;
-        printf("c realloc %i\n", alloc);
-        clauses = realloc (clauses, sizeof(int) * alloc); }
-      for (k = 0; k < size; k++) clauses[stored++] = clause[k];
-      num++;
-      next_clause:; }
+#ifdef PREPARTITION
+  for (i = 0; i < primezip; i++) {
+    tmp = i;
+    for (j = 1; j <= power; j++)
+      tmp = (((tmp+1) * root) - 1) % primezip;
+    for (j = 1; j <= nrofsets; j++) {
+      printf("%i -%i 0\n-%i %i 0\n", i*nrofsets + j, tmp*nrofsets + j, i*nrofsets + j, tmp*nrofsets + j); } }
+#endif
 
   tmp = 0;
   for (i = 1; i <= num; i++) {

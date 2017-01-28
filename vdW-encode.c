@@ -48,6 +48,12 @@ unsigned int smallest_divider (unsigned int n) {
 
   return n; }
 
+unsigned int hash (int *clause, int size) {
+  unsigned int i, result = size;
+  for (i = 0; i < size; i++)
+    result = result * 31 + clause [i];
+  return result; }
+
 unsigned int rotation_factor (unsigned int prime, unsigned int primezip) {
   unsigned int zip, zip_div;
 
@@ -262,13 +268,17 @@ int main (int argc , char *argv[]) {
         printf("-%i -%i %i 0\n", i * nrofsets + j, tmp*nrofsets + k, rotation_start + (j-1) * nrofsets + k); }
 #endif
 
+  int table_size = (1 << 20);
+  int *table = (int*) malloc (sizeof(int) * table_size);
+  for (i = 0; i < table_size; i++) table[i] = -1;
+
   int *clause = (int*) malloc (sizeof (int) * progression);
   // print the actual constraints
   for (i = 1; i <= primezip; i++)
     for (j = 1; (j*(progression-1)) < (full_size - i + 1); j++) {
       int size = 0;
       for (k = 0; k < progression; k++) {
-        int next = rep[(i + k * j - 1) % primezip];
+        int next = rep[(i + k * j - 1) % primezip] + 1;
         int flag = 1;
         for (h = 0; h < size; h++) {
           if (clause[h] == next) flag = 0;
@@ -278,19 +288,26 @@ int main (int argc , char *argv[]) {
             if (clause[h-1] > next)  clause[h  ] = clause[h-1];
             else                     break; }
           clause[h] = next; size++; } }
-      assert (size);
-//      if (size > 2) continue;
+      clause[size++] = 0;
+      unsigned int h = hash (clause, size) % table_size;
+      while (1) {
+        if (table[h] == -1) {
+          table[h] = stored;
+          goto add_clause; }
+        for (k = 0; k < size; k++)
+          if (clauses[table[h]+k] != clause[k])
+            goto next_hash;
+        goto next_clause;
+        next_hash:;
+        h = (h + 1) % table_size; }
+      add_clause:;
       if (stored + size >= alloc) {
         alloc *= 2;
         printf("c realloc %i\n", alloc);
         clauses = realloc (clauses, sizeof(int) * alloc); }
-      for (k = 0; k < size; k++) clauses[stored++] = clause[k] + 1;
-      clauses[stored++] = 0; num++; }
-//      for (h = 1; h <= nrofsets; h++ ) {
-//	for (k = 0; k < size; k++) {
-//          printf ("-%i ", clause[k] * nrofsets + h); }
-//        printf("0\n"); } }
-
+      for (k = 0; k < size; k++) clauses[stored++] = clause[k];
+      num++;
+      next_clause:; }
 
   tmp = 0;
   for (i = 1; i <= num; i++) {
@@ -299,9 +316,6 @@ int main (int argc , char *argv[]) {
         printf ("-%i ", (clauses[tmp+k] - 1) * nrofsets + h);
       printf("0\n"); }
     tmp += k + 1; }
-
-//  for (i = 0; i < stored; i++)
-//  printf("%i\n", clauses[i]);
 
   return 1;
 }

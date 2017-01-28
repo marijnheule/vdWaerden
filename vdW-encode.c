@@ -149,25 +149,26 @@ int main (int argc , char *argv[]) {
   int flag;
   do {
     flag = 0;
-    for (i = 0; i < primezip; i++)
-      if (rep[rep[i]] < rep[i]) {
-//        printf ("c making %i the rep of %i\n", rep[rep[i]], i);
-        rep[i] = rep[rep[i]]; flag = 1; } }
-  while (flag);
+    for (i = 0; i < primezip; i++) {
+      tmp = i;
+      for (j = 1; j <= power; j++)
+        tmp = (((tmp+1) * root) - 1) % primezip;
+//        printf("c rep rel %i %i\n", i, tmp);
+      if      (rep[tmp] > rep[i]) { rep[tmp] = rep[ i ]; flag = 1; printf ("c making %i the rep of %i\n", rep[i], tmp); }
+      else if (rep[tmp] < rep[i]) { rep[ i ] = rep[tmp]; flag = 1; printf ("c making %i the rep of %i\n", rep[tmp], i); } }
+   } while (flag);
 
   int count = 0;
   for (i = 0; i < primezip; i++)
-    if (rep[i] == i) count++;
+    if (rep[i] == i) {
 //      printf ("c rep[%i] = %i\n", i, rep[i]);
+      count++; }
   printf ("c %i representatives\n", count);
 #endif
-
-
   for (i = 0; i < primezip; i++) {
     for (j = 1; j <= nrofsets; j++)
       printf("%i ", i * nrofsets + j);
     printf("0\n"); }
-
 
 #ifdef SBP
   for (i = 0; i < nrofsets; i++)
@@ -278,8 +279,10 @@ int main (int argc , char *argv[]) {
             else                     break; }
           clause[h] = next; size++; } }
       assert (size);
+//      if (size > 2) continue;
       if (stored + size >= alloc) {
         alloc *= 2;
+        printf("c realloc %i\n", alloc);
         clauses = realloc (clauses, sizeof(int) * alloc); }
       for (k = 0; k < size; k++) clauses[stored++] = clause[k] + 1;
       clauses[stored++] = 0; num++; }

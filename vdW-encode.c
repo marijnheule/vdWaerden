@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define INIT	1000
+
 //#define SBP
 //#define INTERNAL_ROOT
 #define MIN_PRIME	2
@@ -65,6 +67,11 @@ int main (int argc , char *argv[]) {
   int nrofvars, nrofclauses, root, root_start, rotation_start, inv_start, rot_fac;
   int power;
   int *rep;
+  int *clauses;
+  int alloc, num = 0, stored = 0;
+
+  alloc   = INIT;
+  clauses = malloc (sizeof(int) * alloc);
 
   if (argc <= 3) {
     printf ("c wrong input: ./internal_sat sets length prime\n");
@@ -259,18 +266,39 @@ int main (int argc , char *argv[]) {
   for (i = 1; i <= primezip; i++)
     for (j = 1; (j*(progression-1)) < (full_size - i + 1); j++) {
       int size = 0;
-      for (k = 0; k < progression; k++)
-        clause[size++] = rep[(i + k * j - 1) % primezip];
-      for (h = 1; h <= nrofsets; h++ ) {
-	for (k = 0; k < size; k++) {
-          printf ("-%i ", clause[k] * nrofsets + h); }
-        printf("0\n"); } }
-
+      for (k = 0; k < progression; k++) {
+        int next = rep[(i + k * j - 1) % primezip];
+        int flag = 1;
+        for (h = 0; h < size; h++) {
+          if (clause[h] == next) flag = 0;
+          if (clause[h] >  next) h = size; }
+        if (flag) {
+          for (h = size; h > 0; h--) {
+            if (clause[h-1] > next)  clause[h  ] = clause[h-1];
+            else                     break; }
+          clause[h] = next; size++; } }
+      assert (size);
+      if (stored + size >= alloc) {
+        alloc *= 2;
+        clauses = realloc (clauses, sizeof(int) * alloc); }
+      for (k = 0; k < size; k++) clauses[stored++] = clause[k] + 1;
+      clauses[stored++] = 0; num++; }
 //      for (h = 1; h <= nrofsets; h++ ) {
-//	for (k = 0; k < progression; k++) {
-//	  int tmp = (i + k * j - 1) % primezip;
-//	  printf ("-%i ", rep[tmp] * nrofsets + h); }
-//        printf("0\n"); } } }
+//	for (k = 0; k < size; k++) {
+//          printf ("-%i ", clause[k] * nrofsets + h); }
+//        printf("0\n"); } }
+
+
+  tmp = 0;
+  for (i = 1; i <= num; i++) {
+    for (h = 1; h <= nrofsets; h++) {
+      for (k = 0; clauses[tmp + k] > 0; k++)
+        printf ("-%i ", (clauses[tmp+k] - 1) * nrofsets + h);
+      printf("0\n"); }
+    tmp += k + 1; }
+
+//  for (i = 0; i < stored; i++)
+//  printf("%i\n", clauses[i]);
 
   return 1;
 }

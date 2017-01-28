@@ -1,5 +1,13 @@
 for i in {388..1000}
 do
+<<<<<<< HEAD
   echo -n $i" "$4" " >> $WORK/vdWaerden/log-$1-$2-$4
   ~/vdWaerden/vdW-$1 $2 $3 $i $4 | timeout 600 ~/glucose-3.0/core/glucose | grep SATIS >> $WORK/vdWaerden/log-$1-$2-$4
+=======
+  for j in {2..2}
+  do
+    echo -n $i" "$j" "
+    ./a.out $1 $2 $i $j | gtimeout 10 glucose | grep SATIS
+  done
+>>>>>>> 87e35ba28cebe18cfbc6402a713a765e0d3fc460
 done

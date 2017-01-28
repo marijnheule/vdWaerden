@@ -1,0 +1,7 @@
+gcc vdW-encode.c -O2 -o vdW-encode
+./vdW-encode $1 $2 $3 $4 | glucose
+./vdW-encode $1 $2 $3 $4 | glucose -model | grep "v " > sol
+echo "c finished solving"
+./vdW-decode sol $1 $2 $3 > certificates/W_$1_$2_$3.cert
+echo "c finished decoding"
+./check-cert certificates/W_$1_$2_$3.cert
